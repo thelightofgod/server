@@ -37,10 +37,19 @@ app.post("/writeback", async (req, res) => {
         const user = userId || "unknown";
 
         for (const c of changes) {
+            // Audit log
             await pool.query(
                 `INSERT INTO transactions (tenant_name, user_id, row_key, field_name, old_value, new_value)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
                 [tenant.name, user, c.row_key, c.field_name, c.old_value, c.new_value]
+            );
+            // Güncel değer tablosu (upsert)
+            await pool.query(
+                `INSERT INTO current_values (tenant_name, row_key, field_name, value, updated_by)
+                 VALUES ($1, $2, $3, $4, $5)
+                 ON CONFLICT (tenant_name, row_key, field_name)
+                 DO UPDATE SET value = $4, updated_by = $5, updated_at = NOW()`,
+                [tenant.name, c.row_key, c.field_name, c.new_value, user]
             );
         }
 
@@ -65,17 +74,15 @@ app.get("/overrides", async (req, res) => {
         if (!tenant) return res.status(403).json({ error: "Geçersiz API key." });
 
         const { rows } = await pool.query(
-            `SELECT DISTINCT ON (row_key, field_name)
-                row_key, field_name, new_value
-             FROM transactions
-             WHERE tenant_name = $1
-             ORDER BY row_key, field_name, created_at DESC`,
+            `SELECT row_key, field_name, value
+             FROM current_values
+             WHERE tenant_name = $1`,
             [tenant.name]
         );
 
         const overrides = {};
         rows.forEach(function (r) {
-            overrides[r.row_key + "||" + r.field_name] = r.new_value;
+            overrides[r.row_key + "||" + r.field_name] = r.value;
         });
 
         res.json({ overrides: overrides });
