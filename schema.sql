@@ -1,9 +1,7 @@
 -- ================================================================
 -- BiTechnology Writeback — Supabase Schema
--- Supabase SQL Editor'da çalıştır
 -- ================================================================
 
--- 1. Müşteri / API key tablosu
 CREATE TABLE IF NOT EXISTS tenants (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name       VARCHAR(255) NOT NULL,
@@ -11,7 +9,6 @@ CREATE TABLE IF NOT EXISTS tenants (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- 2. Tüm değişikliklerin log tablosu
 CREATE TABLE IF NOT EXISTS transactions (
     id          BIGSERIAL PRIMARY KEY,
     tenant_name VARCHAR(255) NOT NULL,
@@ -23,11 +20,17 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at  TIMESTAMP DEFAULT NOW()
 );
 
--- 3. Index'ler
-CREATE INDEX IF NOT EXISTS idx_transactions_tenant ON transactions (tenant_name);
-CREATE INDEX IF NOT EXISTS idx_transactions_user   ON transactions (user_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_date   ON transactions (created_at);
+CREATE TABLE IF NOT EXISTS current_values (
+    id          BIGSERIAL PRIMARY KEY,
+    tenant_name VARCHAR(255) NOT NULL,
+    row_key     VARCHAR(255) NOT NULL,
+    field_name  VARCHAR(255) NOT NULL,
+    value       TEXT NOT NULL,
+    updated_by  VARCHAR(255),
+    updated_at  TIMESTAMP DEFAULT NOW(),
+    UNIQUE (tenant_name, row_key, field_name)
+);
 
--- Örnek müşteri ekle:
--- INSERT INTO tenants (name, api_key) VALUES ('Migros', 'mg_abc123');
--- INSERT INTO tenants (name, api_key) VALUES ('Yataş',  'yt_abc123');
+CREATE INDEX IF NOT EXISTS idx_tx_tenant  ON transactions   (tenant_name);
+CREATE INDEX IF NOT EXISTS idx_tx_date    ON transactions   (created_at);
+CREATE INDEX IF NOT EXISTS idx_cv_tenant  ON current_values (tenant_name);
