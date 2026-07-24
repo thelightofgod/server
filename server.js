@@ -93,14 +93,6 @@ app.get("/overrides", async (req, res) => {
 });
 
 // ----------------------------------------------------------------
-// GET /schema.sql — indirilebilir SQL şema dosyası
-// ----------------------------------------------------------------
-app.get("/schema.sql", (_req, res) => {
-    const path = require("path");
-    res.download(path.join(__dirname, "schema.sql"), "bitechnology-writeback-schema.sql");
-});
-
-// ----------------------------------------------------------------
 // GET /health
 // ----------------------------------------------------------------
 app.get("/health", async (_req, res) => {
